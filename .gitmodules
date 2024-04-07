@@ -1,0 +1,3 @@
+[submodule "data/midi2video"]
+	path = data/midi2video
+	url = https://github.com/diangeli/midi2video
