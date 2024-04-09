@@ -1,0 +1,19 @@
+data: 
+    data_path: data/raw/
+    train_size: 0.8
+    test_size: 0.05
+    val_size: 0.15
+    batch_size: 32
+    enable_transforms: True
+    num_workers: 32
+    random_state: 2023
+model:
+    name: vivit
+    save_model: True
+    save_path: models/
+    loss: ce # dice, focal, tversky, ce
+training:
+    optimizer: adam
+    lr : 0.0003 # 0.0005
+    epochs: 20
+    seed : 37
