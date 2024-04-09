@@ -78,9 +78,7 @@ class Transformer(nn.Module):
             x = ff(x) + x
         return x
 
-
-
-class ViT(nn.Module):
+class ViViT(nn.Module):
     def __init__(
         self,
         *,
