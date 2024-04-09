@@ -3,8 +3,9 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from einops import rearrange
-from model import ViT, Transformer, FeedForward, Attention
+from model import ViViT, Transformer, FeedForward, Attention
 from data import VideoDataset
+from utils import create_midi
 
 epochs = 10
 
@@ -19,9 +20,9 @@ transform = transforms.Compose([
 
 
 train_dataset = VideoDataset(video_dir='silent_videos', midi_dir='midis', transforms=transform)
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
-vivit_model = ViT(
+vivit_model = ViViT(
     image_size=(224, 224),    # Height and width of input frames
     num_frames=125,           # Total number of frames in each video
     num_classes=88,           # For example, 88 keys on the piano
@@ -41,48 +42,41 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 vivit_model = vivit_model.to(device)
 
 # Define your loss function and optimizer
-loss_function = torch.nn.BCEWithLogitsLoss()  # Or any other appropriate loss function
+loss_function = torch.nn.BCEWithLogitsLoss() 
 optimizer = torch.optim.Adam(vivit_model.parameters(), lr=1e-4)
 
 # # Training loop
+epochs = 1  
+threshold = 0.8  
+
 for epoch in range(epochs):
-    for batch in train_loader:
-        video_tensors = batch['video']  # Ensure this matches the dictionary key used in __getitem__
-        midi_labels = batch['midi_labels']
-        # For debugging
-        print("Input video tensor shape:", video_tensors.shape)
+    for batch_idx, batch in enumerate(train_loader):
+        video_tensors = batch['video'].to(device)
+        midi_labels = batch['midi_labels'].to(device)
 
-        print(f"Type of video before calling .to(device): {type(video_tensors)}")
-        video_tensors = video_tensors.to(device)
-        midi_labels = midi_labels.to(device)
-
+        # Reset gradients
+        optimizer.zero_grad()
 
         # Forward pass
-        outputs = vivit_model(video_tensors)
-
-        # TODO: for each frame take the class with the biggest probability 
-        # TODO: fix training loop
+        outputs = vivit_model(video_tensors)  # Assuming your model instance is named 'vivit_model'
+        
+        # Moved this after training -> eval
         # probabilities = outputs.detach().cpu().numpy()
-        # first_class_probabilities = probabilities[0, :, 0]
-        # frame_index = 0  # For the first frame
-        # frame_probabilities = probabilities[0, frame_index, :].tolist()
 
-        # print("Probabilities for the first class across all frames in the first video:", first_class_probabilities)
-        # print("Probabilities for all classes in the first frame of the first video:", frame_probabilities)
+        # # Assuming you want to process batch with index 0
+        # if batch_idx == 0:  # Example: processing for the first batch
+        #     for i in range(probabilities.shape[0]):
+        #         # model_outputs = probabilities[i]
+        #         for video_idx, video_probs in enumerate(probabilities):
+        #             create_midi(video_probs, epoch, batch_idx, video_idx, threshold=0.8)
 
-        
-        # Compute loss
         loss = loss_function(outputs, midi_labels)
-        
-        # Backward pass and optimize
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        
-        # Print loss (or store for later analysis)
-        print(f'Epoch [{epoch}/{epochs}], Loss: {loss.item():.4f}')
-        print("outputs: ", outputs)
+
+        # Log the loss
+        print(f'Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
 # Save your model
-torch.save(vivit_model.state_dict(), 'vivit_piano.pth')
-
+torch.save(vivit_model.state_dict(), 'vivit_piano_model.pth')
