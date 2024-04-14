@@ -137,5 +137,7 @@ class ViViT(nn.Module):
 
         x = self.to_latent(x)
         x = self.mlp_head(x)
+        print("Output after sigmoid:", x) 
+        print(x.shape)
 
         return x
