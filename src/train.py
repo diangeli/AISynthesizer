@@ -7,20 +7,17 @@ from model import ViViT, Transformer, FeedForward, Attention
 from data import VideoDataset
 from utils import create_midi
 
-epochs = 10
 
-# To apply transformations such as resizing and normalization
 from torchvision import transforms
 transform = transforms.Compose([
     transforms.ToPILImage(),
-    transforms.Resize((224, 224)),  # Resize to the input size expected by the model
-    transforms.ToTensor(),  # Convert images to PyTorch tensors
+    transforms.Resize((224, 224)), 
+    transforms.ToTensor(),  
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-
-train_dataset = VideoDataset(video_dir='silent_videos', midi_dir='midis', transforms=transform)
-train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+train_dataset = VideoDataset(video_dir='silent_videos', midi_dir='midis', transforms=transform, mode='train', limit=None)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
 vivit_model = ViViT(
     image_size=(224, 224),    # Height and width of input frames
@@ -37,28 +34,25 @@ vivit_model = ViViT(
     emb_dropout=0.1           # Embedding dropout rate
 )
 
-# Move the model to GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 vivit_model = vivit_model.to(device)
 
-# Define your loss function and optimizer
-loss_function = torch.nn.BCEWithLogitsLoss() 
+loss_function = torch.nn.BCELoss() 
 optimizer = torch.optim.Adam(vivit_model.parameters(), lr=1e-4)
 
-# # Training loop
+# training loop
 epochs = 1  
-threshold = 0.8  
+threshold = 0.5 
 
 for epoch in range(epochs):
     for batch_idx, batch in enumerate(train_loader):
         video_tensors = batch['video'].to(device)
         midi_labels = batch['midi_labels'].to(device)
 
-        # Reset gradients
         optimizer.zero_grad()
 
         # Forward pass
-        outputs = vivit_model(video_tensors)  # Assuming your model instance is named 'vivit_model'
+        outputs = vivit_model(video_tensors)  
         
         # Moved this after training -> eval
         # probabilities = outputs.detach().cpu().numpy()
@@ -79,4 +73,4 @@ for epoch in range(epochs):
         print(f'Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
 # Save your model
-torch.save(vivit_model.state_dict(), 'vivit_piano_model.pth')
+torch.save(vivit_model.state_dict(), 'checkpoints/vivit_piano_model.pth')
