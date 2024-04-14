@@ -28,7 +28,7 @@ model = ViViT(
 ).to(device)
 
 # Load the trained weights
-model.load_state_dict(torch.load('path_to_your_trained_model.pth'))
+model.load_state_dict(torch.load('checkpoints/vivit_piano_model.pth'))
 model.eval()
 
 transform = transforms.Compose([
@@ -38,16 +38,15 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-# TODO: fix VideoDataset loader so that it takes only silent videos as an input and makes them ready for the model.
-test_dataset = VideoDataset(video_dir='test_silent_videos', midi_dir='midis', transforms=transform)
+# Initialize the dataset for evaluation
+test_dataset = VideoDataset(video_dir='test_silent_videos', transforms=transform, mode='eval')
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-
+# Use the DataLoader in your evaluation loop
 with torch.no_grad():
     for idx, batch in enumerate(test_loader):
         video_tensors = batch['video'].to(device)
         probabilities = model(video_tensors).squeeze().cpu().numpy()
 
-        output_file = f"midi_output_{idx}.mid"
-        create_midi(probabilities, output_file=output_file, threshold=0.5)
-        print(f"MIDI file saved to {output_file}")
+        output_file = f"results_midis/midi_output_{idx}.mid"
+        create_midi(probabilities, output_file, threshold=0.5, min_duration=480, max_notes_per_frame=1)
