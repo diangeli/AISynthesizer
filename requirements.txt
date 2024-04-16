@@ -1,0 +1,6 @@
+numpy
+matplotlib
+tqdm
+opencv-python
+tensorboard
+gdown
