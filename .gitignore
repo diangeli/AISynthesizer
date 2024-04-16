@@ -1,6 +1,6 @@
 midis
 silent_videos
-src/__pycache__
+src/video2midi/__pycache__
 checkpoints
 test_midis
 test_silent_videos
