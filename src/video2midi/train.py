@@ -4,7 +4,7 @@ from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from einops import rearrange
 from model import ViViT, Transformer, FeedForward, Attention
-from data import VideoDataset
+from dataset import VideoDataset
 from utils import create_midi
 
 
