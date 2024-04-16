@@ -5,3 +5,4 @@ checkpoints
 test_midis
 test_silent_videos
 results_midis
+note_frames/*
