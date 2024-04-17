@@ -4,3 +4,4 @@ tqdm
 opencv-python
 tensorboard
 gdown
+mido
