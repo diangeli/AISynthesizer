@@ -1,10 +1,9 @@
 import mido
 from mido import MidiFile, MidiTrack, Message
 import numpy as np
+from typing import Any, Callable
+import jax.numpy as jnp
 
-import mido
-from mido import MidiFile, MidiTrack, Message
-import numpy as np
 
 def create_midi(model_outputs, output_file, threshold=0.5, min_duration=480, max_notes_per_frame=1):
     """
@@ -76,10 +75,10 @@ def read_midi(file_path):
             elif msg.type == 'program_change':
                 print(f"Program Change - Channel: {msg.channel}, Program: {msg.program}, Time: {msg.time}")
 
-if __name__ == "__main__":
-    # Specify the path to your MIDI file
-    midi_path = "results_midis/midi_output_0.mid"
-    read_midi(midi_path)
-    midi_path = "midis/track_0.mid"
-    read_midi(midi_path)
+# if __name__ == "__main__":
+#     # Specify the path to your MIDI file
+#     midi_path = "results_midis/midi_output_0.mid"
+#     read_midi(midi_path)
+#     midi_path = "midis/track_0.mid"
+#     read_midi(midi_path)
 
