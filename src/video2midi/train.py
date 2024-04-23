@@ -6,6 +6,7 @@ from einops import rearrange
 from model import ViViT, Transformer, FeedForward, Attention
 from dataset import VideoDataset
 from utils import create_midi
+import os
 
 
 from torchvision import transforms
@@ -16,12 +17,12 @@ transform = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-train_dataset = VideoDataset(video_dir='silent_videos', midi_dir='midis', transforms=transform, mode='train', limit=None)
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+train_dataset = VideoDataset(video_dir='data/processed/videos/beethoven_trimmed', midi_dir='data/processed/midis/beethoven', transforms=transform, mode='train', limit=None)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=32)
 
 vivit_model = ViViT(
     image_size=(224, 224),    # Height and width of input frames
-    num_frames=125,           # Total number of frames in each video
+    num_frames=250,           # Total number of frames in each video
     num_classes=88,           # For example, 88 keys on the piano
     dim=1024,                 # Dimensionality of the token/patch embeddings
     depth=6,                  # Number of transformer blocks (depth)
@@ -41,7 +42,7 @@ loss_function = torch.nn.BCELoss()
 optimizer = torch.optim.Adam(vivit_model.parameters(), lr=1e-4)
 
 # training loop
-epochs = 1  
+epochs = 10  
 threshold = 0.5 
 
 for epoch in range(epochs):
@@ -71,6 +72,14 @@ for epoch in range(epochs):
 
         # Log the loss
         print(f'Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
+        accuracy = ((outputs > threshold) == midi_labels).sum() / (midi_labels.shape[0] * midi_labels.shape[1])
+        print(f'Epoch [{epoch+1}/{epochs}], Batch [{batch_idx+1}/{len(train_loader)}], accuracy: {accuracy.item():.4f}')
+        print(f"midi_lables_sum = {midi_labels.sum().item()}")
+        print(f"mathing = {((outputs >= threshold) == midi_labels).sum().item()}")
+        
 
 # Save your model
-torch.save(vivit_model.state_dict(), 'checkpoints/vivit_piano_model.pth')
+
+models_dir = "models"
+os.makedirs(models_dir, exist_ok=True)
+torch.save(vivit_model.state_dict(), os.path.join(models_dir, "10_epochs_new_model_beethoven.pth"))

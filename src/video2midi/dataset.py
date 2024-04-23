@@ -45,7 +45,7 @@ class VideoDataset(Dataset):
 
         if self.mode == 'train' and self.midi_files[idx] is not None:
             midi_path = self.midi_files[idx]
-            labels = self.midi_to_label_vector(midi_path, num_frames=125)
+            labels = self.midi_to_label_vector(midi_path, num_frames=250)
             return {'video': video_tensor, 'midi_labels': labels}
         else:
             return {'video': video_tensor}
@@ -62,7 +62,7 @@ class VideoDataset(Dataset):
             frames.append(frame)
             success, frame = cap.read()
 
-        while len(frames) < 125: 
+        while len(frames) < 250: 
             frames.append(torch.zeros_like(frames[0])) 
 
         frames_tensor = torch.stack(frames)
