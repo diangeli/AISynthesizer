@@ -1,1 +1,4 @@
 note_frames_multi/*
+video/*
+results/*
+__pycache__/*
