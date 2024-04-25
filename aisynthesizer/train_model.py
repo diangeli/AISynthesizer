@@ -3,15 +3,13 @@ import os
 
 import hydra
 import torch
+from metrics import Metrics
 from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils import Utils
-from omegaconf import DictConfig, OmegaConf
-from data.video_dataset import VideoDataset
 
-from metrics import Metrics
-import wandb
+from data.video_dataset import VideoDataset
 
 logger = logging.getLogger(__name__)
 

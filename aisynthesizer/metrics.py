@@ -1,4 +1,5 @@
-from torchmetrics.functional.classification import binary_accuracy, binary_precision, binary_auroc
+from torchmetrics.functional.classification import binary_accuracy, binary_auroc, binary_precision
+
 
 class Metrics:
     @staticmethod

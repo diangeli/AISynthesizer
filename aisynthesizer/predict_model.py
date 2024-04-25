@@ -1,13 +1,12 @@
-import torch
-from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor, Resize
-import numpy as np
-import mido
-from utils import Utils
-from omegaconf import DictConfig, OmegaConf
-from data import VideoDataset
 import os
 
+import hydra
+import torch
+from omegaconf import DictConfig
+from torch.utils.data import DataLoader
+from utils import Utils
+
+from data import VideoDataset
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

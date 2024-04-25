@@ -1,13 +1,12 @@
+import mido
+import numpy as np
+import pretty_midi
+import soundfile as sf
 import torch
 from omegaconf import DictConfig
 from torchvision import transforms
 
 from aisynthesizer.models.vivit import ViT
-import numpy as np
-import mido
-import numpy as np
-import pretty_midi
-import soundfile as  sf
 
 
 class Utils:
