@@ -119,7 +119,7 @@ class ViT(nn.Module):
         self.pool = pool
         self.to_latent = nn.Identity()
 
-        self.mlp_head = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, num_classes), nn.Sigmoid())
+        self.mlp_head = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, num_classes))
 
     def forward(self, video):
         x = self.to_patch_embedding(video)

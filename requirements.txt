@@ -6,3 +6,9 @@ tqdm
 wandb
 einops
 tqdm
+pretty_midi
+soundfile
+mido
+librosa
+wandb
+torchmetrics

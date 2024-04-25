@@ -1,19 +1,27 @@
 data: 
-    data_path: data/raw/
+    midis_training_path: data/processed/midis/beethoven
+    videos_training_path: data/processed/videos/beethoven_trimmed
     train_size: 0.8
     test_size: 0.05
     val_size: 0.15
-    batch_size: 32
+    batch_size: 16
     enable_transforms: True
-    num_workers: 32
-    random_state: 2023
+    num_workers: 2
+    random_state: 2024
 model:
     name: vivit
     save_model: True
     save_path: models/
     loss: ce # dice, focal, tversky, ce
+    num_frames: 250 #250 for beethoven
+    threshold: 0.2
 training:
     optimizer: adam
     lr : 0.0003 # 0.0005
     epochs: 20
     seed : 37
+inference:
+    models_path: models/
+    model_name: 10_epochs_new_model_beethoven
+    output_path: data/output
+    test_data_path: data/processed/videos/beethoven_test

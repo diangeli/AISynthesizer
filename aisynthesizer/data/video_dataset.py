@@ -9,12 +9,13 @@ from torchvision.transforms import ToTensor
 
 
 class VideoDataset(Dataset):
-    def __init__(self, video_dir, midi_dir, transforms=None):
+    def __init__(self, video_dir, midi_dir, num_frames, transforms=None):
         self.video_dir = video_dir
         self.midi_dir = midi_dir
         self.transforms = transforms
         self.videos = sorted([os.path.join(video_dir, f) for f in os.listdir(video_dir) if f.endswith(".mp4")])
         self.midi_files = sorted([os.path.join(midi_dir, f) for f in os.listdir(midi_dir) if f.endswith(".mid")])
+        self.num_frames = num_frames
 
     def __len__(self):
         return len(self.videos)
@@ -26,7 +27,7 @@ class VideoDataset(Dataset):
 
         midi_path = self.midi_files[idx]
         labels = self.midi_to_label_vector(
-            midi_path, num_frames=125
+            midi_path, num_frames=self.num_frames
         )  # Assuming 'midi_to_label_vector' now correctly accepts a file path and num_frames
 
         return {"video": video_tensor, "midi_labels": labels}
@@ -48,7 +49,7 @@ class VideoDataset(Dataset):
         return frames_tensor
 
     @staticmethod
-    def midi_to_label_vector(midi_file_path, num_frames=125):
+    def midi_to_label_vector(midi_file_path, num_frames):
         midi_data = mido.MidiFile(midi_file_path)
         labels = np.zeros((num_frames, 88), dtype=np.float32)
         total_ticks = sum(msg.time for track in midi_data.tracks for msg in track)

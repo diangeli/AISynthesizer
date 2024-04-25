@@ -181,3 +181,4 @@ cython_debug/
 silent_videos
 aisynthesizer/__pycache__
 /data/
+/outputs/
