@@ -41,7 +41,7 @@ loss_function = torch.nn.BCELoss()
 optimizer = torch.optim.Adam(vivit_model.parameters(), lr=1e-4)
 
 # training loop
-epochs = 1  
+epochs = 2
 threshold = 0.5 
 
 for epoch in range(epochs):

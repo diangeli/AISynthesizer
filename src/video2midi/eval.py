@@ -5,7 +5,7 @@ import numpy as np
 import mido
 from mido import Message, MidiFile, MidiTrack
 from model import ViViT 
-from data import VideoDataset
+from dataset import VideoDataset
 from torchvision import transforms
 from utils import create_midi
 
@@ -28,7 +28,7 @@ model = ViViT(
 ).to(device)
 
 # Load the trained weights
-model.load_state_dict(torch.load('checkpoints/vivit_piano_model.pth'))
+model.load_state_dict(torch.load('checkpoints/vivit_piano_model.pth', map_location='cpu'))
 model.eval()
 
 transform = transforms.Compose([
