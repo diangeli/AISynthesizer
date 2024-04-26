@@ -4,4 +4,14 @@ tqdm
 opencv-python
 tensorboard
 gdown
-mido
+Pillow
+numpy
+torch>=2.1.1
+transformers>=4.36
+optimum>=1.12.0
+pytorch_lightning
+gradio==3.41.2
+pyfluidsynth
+diffusers==0.27.2
+note_seq==0.0.5
+py_midicsv
