@@ -1,8 +1,11 @@
 midis
 silent_videos
 src/video2midi/__pycache__
+src/midi2audio/__pycache__
 checkpoints
 test_midis
 test_silent_videos
 results_midis
 note_frames/*
+aisynth
+src/lstm/__pycache__
