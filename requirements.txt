@@ -12,3 +12,4 @@ mido
 librosa
 wandb
 torchmetrics
+hydra-core

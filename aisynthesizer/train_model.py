@@ -90,10 +90,10 @@ def train_model(config: DictConfig):
             train_accuracy += Metrics.get_accuracy(outputs, midi_labels, threshold) / len(
                 train_loader
             )
-            train_precision += Metrics.get_precision(outputs, midi_labels) / len(
+            train_precision += Metrics.get_precision(outputs, midi_labels, threshold) / len(
                 train_loader
             )
-            train_auroc += Metrics.get_auroc(outputs, midi_labels) / len(train_loader)
+            train_auroc += Metrics.get_auroc(outputs, midi_labels.long()) / len(train_loader)
         
         logger.info(
             f" - Training loss: {train_avg_loss}  - Training accuracy: {train_accuracy}"

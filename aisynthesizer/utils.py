@@ -102,23 +102,23 @@ class Utils:
         sf.write(out_file, wav, samplerate=16000)
         return wav
 
-def read_midi(file_path):
-    # Load a MIDI file
-    midi_file = mido.MidiFile(file_path)
-    
-    print(f"Reading MIDI file: {file_path}")
-    print("Tracks:", len(midi_file.tracks))
-    
-    for track_idx, track in enumerate(midi_file.tracks):
-        print(f"Track {track_idx}: {track.name if hasattr(track, 'name') else 'Unnamed'}")
-        for msg in track:
-            print(msg)
-            if msg.type == 'note_on' and msg.velocity > 0:
-                print(f"Note On - Channel: {msg.channel}, Note: {msg.note}, Velocity: {msg.velocity}, Time: {msg.time}")
-            elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
-                print(f"Note Off - Channel: {msg.channel}, Note: {msg.note}, Velocity: {msg.velocity}, Time: {msg.time}")
-            elif msg.type == 'program_change':
-                print(f"Program Change - Channel: {msg.channel}, Program: {msg.program}, Time: {msg.time}")
+    def read_midi(file_path):
+        # Load a MIDI file
+        midi_file = mido.MidiFile(file_path)
+        
+        print(f"Reading MIDI file: {file_path}")
+        print("Tracks:", len(midi_file.tracks))
+        
+        for track_idx, track in enumerate(midi_file.tracks):
+            print(f"Track {track_idx}: {track.name if hasattr(track, 'name') else 'Unnamed'}")
+            for msg in track:
+                print(msg)
+                if msg.type == 'note_on' and msg.velocity > 0:
+                    print(f"Note On - Channel: {msg.channel}, Note: {msg.note}, Velocity: {msg.velocity}, Time: {msg.time}")
+                elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
+                    print(f"Note Off - Channel: {msg.channel}, Note: {msg.note}, Velocity: {msg.velocity}, Time: {msg.time}")
+                elif msg.type == 'program_change':
+                    print(f"Program Change - Channel: {msg.channel}, Program: {msg.program}, Time: {msg.time}")
 
     # def get_loss_function(self):
     #     if self.config.model.loss == "ce+":
@@ -131,5 +131,4 @@ def read_midi(file_path):
     #         return TverskyLoss('multiclass')
 
     def create_models_name(self, epoch: int):
-        return f"{self.config.model.name}_{self.config.training.optimizer}_\
-                 {self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"
+        return f"{self.config.model.name}_{self.config.training.optimizer}_{self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"
