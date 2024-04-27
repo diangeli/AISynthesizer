@@ -2,10 +2,8 @@ import mido
 from mido import MidiFile, MidiTrack, Message
 import numpy as np
 from typing import Any, Callable
-# import jax.numpy as jnp
 
-
-def create_midi(model_outputs, output_file, threshold=0.5, min_duration=480, max_notes_per_frame=1):
+def create_midi(model_outputs, output_file, threshold=0.1, min_duration=480, max_notes_per_frame=2):
     """
     Converts model output probabilities to a MIDI file, adding more realistic durations and limiting polyphony.
     
@@ -38,21 +36,25 @@ def create_midi(model_outputs, output_file, threshold=0.5, min_duration=480, max
 
         # Turn off all current notes not in the new set of frame events
         new_notes_set = set(note for note, _ in frame_events)
+        note_off_time = min_duration  # Time for note-off messages
+
         for note_number in current_notes:
             if note_number not in new_notes_set:
-                track.append(Message('note_off', note=note_number, velocity=64, time=0))
+                track.append(Message('note_off', note=note_number, velocity=64, time=note_off_time))
 
         # Update currently playing notes
         current_notes = list(new_notes_set)
 
         # Trigger new notes
+        note_on_time = min_duration if frame_idx > 0 else 0
         for note_number, _ in frame_events:
-            track.append(Message('note_on', note=note_number, velocity=64, time=min_duration if frame_idx > 0 else 0))
+            track.append(Message('note_on', note=note_number, velocity=64, time=note_on_time))
 
-    # Turn off any remaining notes
+    # Turn off any remaining notes at the end
     for note_number in current_notes:
         track.append(Message('note_off', note=note_number, velocity=64, time=min_duration))
 
+    # Save the MIDI file
     mid.save(output_file)
     print(f"MIDI file saved as {output_file}")
 
@@ -77,6 +79,6 @@ def read_midi(file_path):
 
 if __name__ == "__main__":
     # Specify the path to your MIDI file
-    midi_path = "results_midis/midi_output_30.mid"
+    midi_path = "results_midis/midi_output_3.mid"
     read_midi(midi_path)
 
