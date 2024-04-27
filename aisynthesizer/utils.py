@@ -5,6 +5,7 @@ import soundfile as sf
 import torch
 from omegaconf import DictConfig
 from torchvision import transforms
+from segmentation_models_pytorch.losses import DiceLoss, FocalLoss, TverskyLoss
 
 from aisynthesizer.models.vivit import ViT
 
@@ -120,15 +121,13 @@ class Utils:
                 elif msg.type == 'program_change':
                     print(f"Program Change - Channel: {msg.channel}, Program: {msg.program}, Time: {msg.time}")
 
-    # def get_loss_function(self):
-    #     if self.config.model.loss == "ce+":
-    #         return nn.CrossEntropyLoss()
-    #     elif self.config.model.loss == "dice":
-    #         return DiceLoss('multiclass')
-    #     elif self.config.model.loss == "focal":
-    #         return FocalLoss('multiclass')
-    #     else:
-    #         return TverskyLoss('multiclass')
+    def get_loss_function(self):
+        if self.config.model.loss == "bce":
+            return torch.nn.BCEWithLogitsLoss()
+        elif self.config.model.loss == "focal":
+            return FocalLoss('binary', alpha=0.2)
+        else:
+            return torch.nn.BCEWithLogitsLoss()
 
     def create_models_name(self, epoch: int):
         return f"{self.config.model.name}_{self.config.training.optimizer}_{self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"

@@ -4,12 +4,15 @@ import os
 import hydra
 import torch
 from metrics import Metrics
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils import Utils
+import wandb
+import torch.optim.lr_scheduler as lr_scheduler
 
 from data.video_dataset import VideoDataset
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +23,12 @@ def train_model(config: DictConfig):
     
     
     # wandb
-    # wandb_key = os.getenv("WANDB_API_KEY")
-    # wandb.login(key=wandb_key)
-    # print(config)
-    # run = wandb.init(
-    #     project="AISynthesizerTest", entity='final_project', config=OmegaConf.to_container(config)
-    # )
+    wandb_key = os.getenv("WANDB_API_KEY")
+    wandb.login(key=wandb_key)
+    print(config)
+    run = wandb.init(
+        project="AISynthesizer", config=OmegaConf.to_container(config)
+    )
 
     torch.manual_seed(config.training.seed)
     model = utils.get_model()
@@ -38,15 +41,22 @@ def train_model(config: DictConfig):
                                  transforms=utils.get_transforms())
     train_loader = DataLoader(train_dataset, batch_size=config.data.batch_size, shuffle=True, num_workers=config.data.num_workers)
 
+    val_dataset = VideoDataset(video_dir=config.data.videos_val_path,
+                                 midi_dir=config.data.midis_val_path,
+                                 num_frames=config.model.num_frames, 
+                                 transforms=utils.get_transforms())
+    val_loader = DataLoader(val_dataset, batch_size=config.data.batch_size, shuffle=True, num_workers=config.data.num_workers)
     # Move the model to GPU if available
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
     # Define your loss function and optimizer
-    loss_function = torch.nn.BCEWithLogitsLoss()  # Or any other appropriate loss function
+    loss_function = utils.get_loss_function()  # Or any other appropriate loss function
     optimizer = utils.get_optimizer(model)
     
     threshold = config.model.threshold
+    
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
 
     # # Training loop
     for epoch in tqdm(range(epochs), desc="Epoch"):
@@ -55,6 +65,7 @@ def train_model(config: DictConfig):
         train_precision = 0.0
         train_auroc = 0.0
         
+        model.train()  # train mode
         for batch_idx, batch in enumerate(train_loader):
             video_tensors = batch["video"]  # Ensure this matches the dictionary key used in __getitem__
             midi_labels = batch["midi_labels"]
@@ -101,14 +112,69 @@ def train_model(config: DictConfig):
         logger.info(f" - Train specificity: {train_precision}")
         logger.info(f" - Train AUROC: {train_auroc}")
 
-        # wandb.log(
-        #     {
-        #         "train_loss": train_avg_loss,
-        #         "train_accuracy": train_accuracy,
-        #         "train_precisoin": train_precision,
-        #         "train_auroc": train_auroc,
-        #     }
-        # )
+        wandb.log(
+            {
+                "train_loss": train_avg_loss,
+                "train_accuracy": train_accuracy,
+                "train_precision": train_precision,
+                "train_auroc": train_auroc,
+            }
+        )
+        
+         ################################################################
+        # Validation
+        ################################################################
+
+        # Compute the evaluation set loss
+        val_avg_loss = 0.0
+        val_accuracy = 0.0
+        val_precision = 0.0
+        val_auroc = 0.0
+
+        model.eval()
+
+        for batch in tqdm(
+            val_loader, desc="Validation", leave=None
+        ):
+            video_tensors = batch["video"]  # Ensure this matches the dictionary key used in __getitem__
+            midi_labels = batch["midi_labels"]
+        
+            video_tensors = video_tensors.to(device)
+            midi_labels = midi_labels.to(device)
+            
+            with torch.no_grad():
+                val_outputs = model(video_tensors)
+
+            loss = loss_function(val_outputs, midi_labels)
+
+            val_avg_loss += loss.item() / len(val_loader)
+
+            val_accuracy += Metrics.get_accuracy(outputs, midi_labels, threshold) / len(
+                val_loader
+            )
+            val_precision += Metrics.get_precision(outputs, midi_labels, threshold) / len(
+                val_loader
+            )
+            val_auroc += Metrics.get_auroc(outputs, midi_labels.long()) / len(val_loader)
+        
+        scheduler.step(val_avg_loss)
+        logger.info(
+            f" - Validation loss: {val_avg_loss}  - Validation accuracy: {val_accuracy}"
+        )
+        logger.info(f" - Validation specificity: {val_precision}")
+        logger.info(f" - Validation AUROC: {val_auroc}")
+
+        wandb.log(
+            {
+                "val_loss": val_avg_loss,
+                "val_accuracy": val_accuracy,
+                "val_precision": val_precision,
+                "val_auroc": val_auroc,
+            }
+        )
+
+        # Adjust lr
+        scheduler.step()
 
         # Save your model
         if config.model.save_model: 
@@ -120,7 +186,7 @@ def train_model(config: DictConfig):
                     os.path.join(config.model.save_path, utils.create_models_name(epoch) + ".pth"),
             )
             
-    #run.finish()
+    run.finish()
 
 
 if __name__ == "__main__":
