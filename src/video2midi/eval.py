@@ -49,4 +49,4 @@ with torch.no_grad():
         probabilities = model(video_tensors).squeeze().cpu().numpy()
 
         output_file = f"results_midis/midi_output_{idx}.mid"
-        create_midi(probabilities, output_file, threshold=0.5, min_duration=480, max_notes_per_frame=1)
+        create_midi(probabilities, output_file, threshold=0.1, min_duration=480, max_notes_per_frame=2)
