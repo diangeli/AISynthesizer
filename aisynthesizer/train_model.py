@@ -149,15 +149,14 @@ def train_model(config: DictConfig):
 
             val_avg_loss += loss.item() / len(val_loader)
 
-            val_accuracy += Metrics.get_accuracy(outputs, midi_labels, threshold) / len(
+            val_accuracy += Metrics.get_accuracy(val_outputs, midi_labels, threshold) / len(
                 val_loader
             )
-            val_precision += Metrics.get_precision(outputs, midi_labels, threshold) / len(
+            val_precision += Metrics.get_precision(val_outputs, midi_labels, threshold) / len(
                 val_loader
             )
-            val_auroc += Metrics.get_auroc(outputs, midi_labels.long()) / len(val_loader)
+            val_auroc += Metrics.get_auroc(val_outputs, midi_labels.long()) / len(val_loader)
         
-        scheduler.step(val_avg_loss)
         logger.info(
             f" - Validation loss: {val_avg_loss}  - Validation accuracy: {val_accuracy}"
         )
@@ -172,9 +171,8 @@ def train_model(config: DictConfig):
                 "val_auroc": val_auroc,
             }
         )
-
-        # Adjust lr
-        scheduler.step()
+        
+        scheduler.step(val_avg_loss)
 
         # Save your model
         if config.model.save_model: 
