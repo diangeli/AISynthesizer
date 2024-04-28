@@ -57,12 +57,14 @@ class Utils:
         threshold = self.config.model.threshold
         print(smodel_outputs)
         smodel_outputs = smodel_outputs >= threshold
-        print(smodel_outputs)
+        print(smodel_outputs.sum())
         # compute onsets and offsets
         onset = np.zeros(smodel_outputs.shape)
         offset = np.zeros(smodel_outputs.shape)
         for j in range(smodel_outputs.shape[0]):
             if j != 0:
+                np.setdiff1d(smodel_outputs[j - 1].nonzero(),
+                                        smodel_outputs[j].nonzero())
                 onset[j][np.setdiff1d(smodel_outputs[j].nonzero(),
                                         smodel_outputs[j - 1].nonzero())] = 1
                 offset[j][np.setdiff1d(smodel_outputs[j - 1].nonzero(),
@@ -70,6 +72,7 @@ class Utils:
             else:
                 onset[j][smodel_outputs[j].nonzero()] = 1
         onset += offset
+        
         
         print("The onset has shape:", onset.shape)
         onset = onset.T
@@ -85,8 +88,9 @@ class Utils:
             notes[21 + i] = merged_list
         return notes
 
-    def generate_midi(notes, output_file):
+    def generate_midi(self, notes, output_file):
         instrument = 'Acoustic Grand Piano'
+        print(notes)
         pm = pretty_midi.PrettyMIDI(initial_tempo=80)
         piano_program = pretty_midi.instrument_name_to_program(instrument) #Acoustic Grand Piano
         piano = pretty_midi.Instrument(program=piano_program)
@@ -98,12 +102,12 @@ class Utils:
                 piano.notes.append(note)
         pm.instruments.append(piano)
         pm.write(output_file)
-        wav = pm.fluidsynth(fs=16000)
-        out_file = output_file.replace(".mid", ".wav")
-        sf.write(out_file, wav, samplerate=16000)
-        return wav
+        # wav = pm.fluidsynth(fs=16000)
+        # out_file = output_file.replace(".mid", ".wav")
+        # sf.write(out_file, wav, samplerate=16000)
+        return
 
-    def read_midi(file_path):
+    def read_midi(self, file_path):
         # Load a MIDI file
         midi_file = mido.MidiFile(file_path)
         

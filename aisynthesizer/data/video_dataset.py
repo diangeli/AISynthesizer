@@ -63,7 +63,7 @@ class VideoDataset(Dataset):
             frames.append(frame)
             success, frame = cap.read()
 
-        while len(frames) < 250: 
+        while len(frames) < self.num_frames: 
             frames.append(torch.zeros_like(frames[0])) 
 
         frames_tensor = torch.stack(frames)
@@ -99,6 +99,5 @@ class VideoDataset(Dataset):
                     note_index = msg.note - 21
                     if 0 <= note_index < 88:
                         note_active[note_index] = False
-
         return labels
 
