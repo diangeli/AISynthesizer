@@ -176,7 +176,7 @@ def train_model(config: DictConfig):
 
         # Save your model
         if config.model.save_model: 
-            if epoch % 10 == 0:
+            if epoch % 10 == 0 and epoch > 0:
                 models_dir = "models"
                 os.makedirs(models_dir, exist_ok=True)
                 torch.save(

@@ -16,12 +16,12 @@ model:
     name: vivit
     save_model: True
     save_path: models/
-    loss: focal # bce
+    loss: bce # bce
     num_frames: 5 #250 for beethoven
-    threshold: 0.002311740769073367
+    threshold: 0.5
 training:
     optimizer: adam
-    lr : 0.0001 # 0.0005
+    lr : 0.0003 # 0.0005
     epochs: 100
     seed : 37
 inference:

@@ -134,4 +134,4 @@ class Utils:
             return torch.nn.BCEWithLogitsLoss()
 
     def create_models_name(self, epoch: int):
-        return f"{self.config.model.name}_{self.config.training.optimizer}_{self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"
+        return f"{self.config.model.name}_{self.config.model.loss}_{self.config.training.optimizer}_{self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"
