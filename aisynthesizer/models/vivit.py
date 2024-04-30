@@ -136,7 +136,7 @@ class ViT(nn.Module):
             x = x.max(dim=1, keepdim=True)[0]  # Max pooling
 
         # Expand the pooled representation to match the number of frames
-        x = x.expand(-1, video.shape[1], -1)
+        #x = x.expand(-1, video.shape[1], -1)
 
         x = self.to_latent(x)
         x = self.mlp_head(x)

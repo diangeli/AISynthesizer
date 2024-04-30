@@ -4,7 +4,8 @@ from torchvision.transforms import ToTensor
 import numpy as np
 import cv2
 import os
-import mido  
+import mido 
+import itertools as it
 
 class VideoDataset(Dataset):
     def __init__(self, video_dir, midi_dir=None, num_frames = 125, transforms=None, mode='train', limit=None):
@@ -28,34 +29,38 @@ class VideoDataset(Dataset):
             self.midi_files = sorted([os.path.join(midi_dir, f) for f in os.listdir(midi_dir) if f.endswith('.mid')])
         else:
             self.midi_files = [None] * len(self.videos)  # Placeholder when no MIDI files are present
+        self.target_videos = None
+        self.target_midis = None
+        self.load_data()
 
         # Apply limit if specified
-        if limit is not None:
-            self.videos = self.videos[:limit]
-            if midi_dir:
-                self.midi_files = self.midi_files[:limit]
-            else:
-                self.midi_files = [None] * len(self.videos)
+        # if limit is not None:
+        #     self.videos = self.videos[:limit]
+        #     if midi_dir:
+        #         self.midi_files = self.midi_files[:limit]
+        #     else:
+        #         self.midi_files = [None] * len(self.videos)
 
     def __len__(self):
         return len(self.videos)
 
     def __getitem__(self, idx):
-        video_path = self.videos[idx]
-        video_tensor = self.load_video_frames_as_tensor(video_path, self.transforms)
+        video_path, target_frame_num, target_frames = self.target_videos[idx]
+        video_tensor = self.load_video_frames_as_tensor(video_path, target_frames, self.transforms)
 
         if self.mode == 'train' and self.midi_files[idx] is not None:
-            midi_path = self.midi_files[idx]
-            labels = self.midi_to_label_vector(midi_path, num_frames=self.num_frames)
+            midi_path, target_frame_num = self.target_midis[idx]
+            labels = self.midi_to_label_vector(midi_path, target_frame_num, num_frames=self.num_frames)
             return {'video': video_tensor, 'midi_labels': labels}
         else:
             return {'video': video_tensor}
 
-    def load_video_frames_as_tensor(self, video_path, transforms):
+    def load_video_frames_as_tensor(self, video_path, target_frames, transforms):
         cap = cv2.VideoCapture(str(video_path))
         frames = []
-        success, frame = cap.read()
-        while success:
+        for frame_num in target_frames:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+            success, frame = cap.read()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # Convert to RGB
             frame = ToTensor()(frame)  # Convert to tensor
             if transforms:
@@ -64,16 +69,17 @@ class VideoDataset(Dataset):
             success, frame = cap.read()
 
         while len(frames) < self.num_frames: 
+            print("Something is wrongg!!!!")
             frames.append(torch.zeros_like(frames[0])) 
 
         frames_tensor = torch.stack(frames)
         cap.release()
-        return frames_tensor        
+        return frames_tensor       
     
     @staticmethod
-    def midi_to_label_vector(midi_file_path, num_frames):
+    def midi_to_label_vector(midi_file_path, target_frame, num_frames):
         midi_data = mido.MidiFile(midi_file_path)
-        labels = np.zeros((num_frames, 88), dtype=np.float32)
+        labels = np.zeros((88), dtype=np.float32)
         total_ticks = sum(msg.time for track in midi_data.tracks for msg in track)
         ticks_per_frame = total_ticks / num_frames
         current_frame = 0
@@ -99,5 +105,18 @@ class VideoDataset(Dataset):
                     note_index = msg.note - 21
                     if 0 <= note_index < 88:
                         note_active[note_index] = False
-        return labels
+        return labels[target_frame]
+    
+    def load_data(self):
+        self.target_videos = []
+        for i , video_path, midi_path in enumerate(it.zip(self.videos, self.midi_files)):
+            video = cv2.VideoCapture(str(video_path))
+            total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+            half = int(self.num_frames / 2)
+            for(frame_num) in range(total_frames):
+                target_frames = list(range(frame_num-half,frame_num+half+1))
+                target_frames = [frame if frame >= 0 else 0 for frame in target_frames ]
+                target_frames = [frame if frame < total_frames else total_frames-1 for frame in target_frames ]
+                self.target_videos.append((video_path,frame_num,target_frames))
+                self.target_midis.append((midi_path, frame_num))
 
