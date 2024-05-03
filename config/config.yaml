@@ -8,7 +8,7 @@ data:
     train_size: 0.8
     test_size: 0.05
     val_size: 0.15
-    batch_size: 16
+    batch_size: 256
     enable_transforms: True
     num_workers: 32
     random_state: 2024

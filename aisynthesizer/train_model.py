@@ -40,6 +40,9 @@ def train_model(config: DictConfig):
                                  num_frames=config.model.num_frames, 
                                  transforms=utils.get_transforms())
     train_loader = DataLoader(train_dataset, batch_size=config.data.batch_size, shuffle=True, num_workers=config.data.num_workers)
+    
+    logger.info(f" - Train dataset: {len(train_loader)}")
+    
 
     val_dataset = VideoDataset(video_dir=config.data.videos_val_path,
                                  midi_dir=config.data.midis_val_path,
@@ -66,13 +69,14 @@ def train_model(config: DictConfig):
         train_auroc = 0.0
         
         model.train()  # train mode
-        for batch_idx, batch in enumerate(train_loader):
+        for batch in tqdm(train_loader, desc="Batches"):
             video_tensors = batch["video"]  # Ensure this matches the dictionary key used in __getitem__
             midi_labels = batch["midi_labels"]
-        
             video_tensors = video_tensors.to(device)
             midi_labels = midi_labels.to(device)
-
+            
+            print(f"video: {video_tensors.shape}")
+            print(f"labels: {midi_labels.shape}")
             # Forward pass
             outputs = model(video_tensors)
 

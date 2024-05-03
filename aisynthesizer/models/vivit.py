@@ -140,5 +140,6 @@ class ViT(nn.Module):
 
         x = self.to_latent(x)
         x = self.mlp_head(x)
+        x = x.squeeze()
 
         return x

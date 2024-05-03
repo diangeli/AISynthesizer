@@ -42,15 +42,15 @@ class VideoDataset(Dataset):
         #         self.midi_files = [None] * len(self.videos)
 
     def __len__(self):
-        return len(self.videos)
+        return len(self.target_videos)
 
     def __getitem__(self, idx):
         video_path, target_frame_num, target_frames = self.target_videos[idx]
         video_tensor = self.load_video_frames_as_tensor(video_path, target_frames, self.transforms)
 
-        if self.mode == 'train' and self.midi_files[idx] is not None:
-            midi_path, target_frame_num = self.target_midis[idx]
-            labels = self.midi_to_label_vector(midi_path, target_frame_num, num_frames=self.num_frames)
+        if self.mode == 'train' and self.target_midis[idx] is not None:
+            midi_path, target_frame_num, total_frames = self.target_midis[idx]
+            labels = self.midi_to_label_vector(midi_path, target_frame_num, total_frames)
             return {'video': video_tensor, 'midi_labels': labels}
         else:
             return {'video': video_tensor}
@@ -77,11 +77,11 @@ class VideoDataset(Dataset):
         return frames_tensor       
     
     @staticmethod
-    def midi_to_label_vector(midi_file_path, target_frame, num_frames):
+    def midi_to_label_vector(midi_file_path, target_frame, total_frames):
         midi_data = mido.MidiFile(midi_file_path)
-        labels = np.zeros((88), dtype=np.float32)
+        labels = np.zeros((total_frames, 88), dtype=np.float32)
         total_ticks = sum(msg.time for track in midi_data.tracks for msg in track)
-        ticks_per_frame = total_ticks / num_frames
+        ticks_per_frame = total_ticks / total_frames
         current_frame = 0
         accumulated_ticks = 0
 
@@ -94,7 +94,7 @@ class VideoDataset(Dataset):
                     labels[current_frame] = note_active.astype(float)
                     accumulated_ticks -= ticks_per_frame
                     current_frame += 1
-                    if current_frame >= num_frames:
+                    if current_frame >= total_frames:
                         break
 
                 if msg.type == 'note_on':
@@ -109,14 +109,15 @@ class VideoDataset(Dataset):
     
     def load_data(self):
         self.target_videos = []
-        for i , video_path, midi_path in enumerate(it.zip(self.videos, self.midi_files)):
+        self.target_midis = []
+        for video_path, midi_path in zip(self.videos, self.midi_files):
             video = cv2.VideoCapture(str(video_path))
             total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
             half = int(self.num_frames / 2)
-            for(frame_num) in range(total_frames):
+            for frame_num in range(int(total_frames)):
                 target_frames = list(range(frame_num-half,frame_num+half+1))
                 target_frames = [frame if frame >= 0 else 0 for frame in target_frames ]
                 target_frames = [frame if frame < total_frames else total_frames-1 for frame in target_frames ]
                 self.target_videos.append((video_path,frame_num,target_frames))
-                self.target_midis.append((midi_path, frame_num))
+                self.target_midis.append((midi_path, frame_num, int(total_frames)))
 
