@@ -8,6 +8,10 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
 
         self.encoder_type = encoder
+        if pretrained:
+            self.weights = 'IMAGENET1K_V1'
+        else: 
+            self.weights = None
 
         if encoder == 'simple':
             self.encoder = nn.Sequential(
@@ -28,18 +32,19 @@ class Classifier(nn.Module):
 
         else:
             if encoder == 'resnet50':
-                self.encoder = models.resnet50(weights='IMAGENET1K_V1')
+                self.encoder = models.resnet50(weights=self.weights)
             elif encoder == 'resnet18':
-                self.encoder = models.resnet18(weights='IMAGENET1K_V1')
+                self.encoder = models.resnet18(weights=self.weights)
             elif encoder == 'vit16':
-                self.encoder = models.vit_b_16(weights='IMAGENET1K_V1')
+                self.encoder = models.vit_b_16(weights=self.weights)
+            elif encoder == 'vit32':
+                self.encoder = models.vit_b_32(weights=self.weights)
 
             self.decoder = nn.Sequential(
                 nn.Linear(1000, 120),
                 nn.ReLU(),
                 nn.Linear(120, num_classes)
             )
-        
         
 
     def forward(self, x):
