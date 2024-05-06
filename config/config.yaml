@@ -18,7 +18,7 @@ model:
     save_path: models/
     loss: bce # bce
     num_frames: 5 #250 for beethoven
-    threshold: 0.5
+    threshold: 0.2
 training:
     optimizer: adam
     lr : 0.0003 # 0.0005
@@ -26,6 +26,6 @@ training:
     seed : 37
 inference:
     models_path: models/
-    model_name: vivit_bce_adam_0.0003_epoch_40_out_of_100_frames_250.pth
+    model_name: vivit_bce_adam_0.0003_epoch_2_out_of_100_frames_5.pth
     output_path: data/output
     test_data_path: data/processed/videos/beethoven_test

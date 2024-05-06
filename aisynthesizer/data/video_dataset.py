@@ -113,6 +113,8 @@ class VideoDataset(Dataset):
         for video_path, midi_path in zip(self.videos, self.midi_files):
             video = cv2.VideoCapture(str(video_path))
             total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
+            if total_frames != 250:
+                continue
             half = int(self.num_frames / 2)
             for frame_num in range(int(total_frames)):
                 target_frames = list(range(frame_num-half,frame_num+half+1))

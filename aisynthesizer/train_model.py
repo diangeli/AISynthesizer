@@ -75,8 +75,8 @@ def train_model(config: DictConfig):
             video_tensors = video_tensors.to(device)
             midi_labels = midi_labels.to(device)
             
-            print(f"video: {video_tensors.shape}")
-            print(f"labels: {midi_labels.shape}")
+            # print(f"video: {video_tensors.shape}")
+            # print(f"labels: {midi_labels.shape}")
             # Forward pass
             outputs = model(video_tensors)
 
