@@ -9,3 +9,4 @@ results_midis
 note_frames/*
 aisynth
 src/lstm/__pycache__
+dimos_checkpoints
