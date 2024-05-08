@@ -44,47 +44,96 @@ def evaluate_all_midis(ground_truth_dir, predicted_dir):
 
     return avg_precision, avg_recall, avg_f1
 
+def midi_to_piano_roll(midi_file, fs=100):
+    """Convert MIDI file to a Piano Roll array."""
+    midi_data = pretty_midi.PrettyMIDI(midi_file)
+    piano_roll = midi_data.get_piano_roll(fs=fs)
+    return (piano_roll > 0).astype(int)
+
+def calculate_confusion_matrix(gt_piano_roll, pred_piano_roll):
+    """Calculate the confusion matrix from two piano rolls."""
+    TP = np.sum(np.logical_and(pred_piano_roll == 1, gt_piano_roll == 1))
+    FP = np.sum(np.logical_and(pred_piano_roll == 1, gt_piano_roll == 0))
+    TN = np.sum(np.logical_and(pred_piano_roll == 0, gt_piano_roll == 0))
+    FN = np.sum(np.logical_and(pred_piano_roll == 0, gt_piano_roll == 1))
+    return TP, FP, TN, FN
+
+def confusion_matrix(ground_truth_dir, predicted_dir, fs=100):
+    """Evaluate all MIDI files in given directories and compute a global confusion matrix."""
+    global_TP, global_FP, global_TN, global_FN = 0, 0, 0, 0
+
+    for ground_truth_filename in os.listdir(ground_truth_dir):
+        if ground_truth_filename.endswith('.mid'):
+            ground_truth_path = os.path.join(ground_truth_dir, ground_truth_filename)
+            predicted_path = os.path.join(predicted_dir, ground_truth_filename)
+
+            if os.path.exists(predicted_path):
+                gt_piano_roll = midi_to_piano_roll(ground_truth_path, fs)
+                pred_piano_roll = midi_to_piano_roll(predicted_path, fs)
+                TP, FP, TN, FN = calculate_confusion_matrix(gt_piano_roll, pred_piano_roll)
+
+                global_TP += TP
+                global_FP += FP
+                global_TN += TN
+                global_FN += FN
+            else:
+                print(f"Predicted MIDI file not found for {ground_truth_filename}")
+
+    return global_TP, global_FP, global_TN, global_FN
+
+
 ground_truth_dir = 'midis'
 predicted_dir = 'classification_midis/ResNet18'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
-ground_truth_dir = 'midis'
+
 predicted_dir = 'classification_midis/ResNet18_pt'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
-ground_truth_dir = 'midis'
+
 predicted_dir = 'classification_midis/ResNet50'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
 
-ground_truth_dir = 'midis'
 predicted_dir = 'classification_midis/ResNet50_pt'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
 
-ground_truth_dir = 'midis'
 predicted_dir = 'classification_midis/ViT16'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
 
-ground_truth_dir = 'midis'
 predicted_dir = 'classification_midis/ViT16_pt'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
 
-ground_truth_dir = 'midis'
 predicted_dir = 'classification_midis/ViT32'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
 
 
-ground_truth_dir = 'midis'
 predicted_dir = 'classification_midis/ViT32_pt'
 avg_precision, avg_recall, avg_f1 = evaluate_all_midis(ground_truth_dir, predicted_dir)
 print(f"Average Precision: {avg_precision}, Average Recall: {avg_recall}, Average F1 Score: {avg_f1}")
+global_TP, global_FP, global_TN, global_FN = confusion_matrix(ground_truth_dir, predicted_dir)
+print(f"Global TP: {global_TP}, FP: {global_FP}, TN: {global_TN}, FN: {global_FN}")
