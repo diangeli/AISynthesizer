@@ -1,72 +1,71 @@
 import cv2
 import torch
 import numpy as np
-import pretty_midi
 from torchvision import transforms
-
+from mido import MidiFile, MidiTrack, Message, MetaMessage
+from mido import bpm2tempo
 from model import Classifier
 
 def process_video_to_midi(video_path, model, device):
-    # transformations for each frame
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error: Couldn't open the video file.")
+        return
+
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((224, 224)), 
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        transforms.ToTensor(),  
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
     ])
 
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print("Error opening video file")
-        return
-
-    midi_file = pretty_midi.PrettyMIDI()
-    piano_program = pretty_midi.instrument_name_to_program('Acoustic Grand Piano')
-    piano = pretty_midi.Instrument(program=piano_program)
-
-    # Set tempo
-    tempo = 500000  # microseconds per beat, corresponds to 120 BPM
-    midi_file.tempo_changes.append(pretty_midi.TimeSignature(4, 4, 0))
+    midi = MidiFile()
+    track = MidiTrack()
+    midi.tracks.append(track)
+    track.append(MetaMessage('set_tempo', tempo=500000)) 
+    ticks_per_note = 480  
     
-    frame_rate = cap.get(cv2.CAP_PROP_FPS)
-    current_time = 0
-    last_time = 0
+    current_tick = 0
+    active_notes = {}
+    note_count = 0
+    frame_index = 0  
+
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame_tensor = transform(frame).unsqueeze(0).to(device)
+        model.eval()
         with torch.no_grad():
             output = model(frame_tensor)
             predicted = torch.sigmoid(output).cpu().numpy()
 
-        key_indices = np.where(predicted >= 0.5)[1]
-        for idx in key_indices:
-            note_number = idx + 21 
-            note_on = pretty_midi.Note(
-                velocity=64, pitch=note_number, start=current_time, end=current_time + 1/frame_rate)
-            piano.notes.append(note_on)
-            note_off = pretty_midi.Note(
-                velocity=0, pitch=note_number, start=current_time + 1/frame_rate, end=current_time + 2/frame_rate)
-            piano.notes.append(note_off)
+        threshold = 0.9
+        current_active_notes = set(np.where(predicted >= threshold)[1] + 17) 
+        for note in current_active_notes:
+            print(note)
+            note_count += 1
+            if note not in active_notes:
+                track.append(Message('note_on', note=note, velocity=64, time=ticks_per_note))
+                track.append(Message('note_off', note=note, velocity=0, time=ticks_per_note))
+                active_notes[note] = current_tick + ticks_per_note  # Schedule note off
+        
+        current_tick = 1  
+        frame_index += 1
 
-        last_time = current_time
-        current_time += 1/frame_rate
-
-    midi_file.instruments.append(piano)
-    midi_file.write('output.mid')
-
+    track.append(MetaMessage('end_of_track'))
+    midi.save('output.mid')
     cap.release()
+    print(f"MIDI file has been saved as 'output.mid'. Total frames processed: {frame_index}")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = Classifier(num_classes=91, encoder='resnet18', pretrained=True)
-# TODO: path
-model.load_state_dict(torch.load('...'))
+model.load_state_dict(torch.load('dimos_checkpoints/ResNet18_pt/model.pt', map_location=device))
 model.to(device)
 model.eval()
 
-# TODO: path
-video_path = '...'
+video_path = 'silent_videos/track_111.mid.mp4'
 process_video_to_midi(video_path, model, device)
