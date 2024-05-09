@@ -140,7 +140,7 @@ if __name__ == '__main__':
         os.makedirs('output')
 
     video_length = 5
-    for video in tqdm(range(5000)):
+    for video in tqdm(range(10)):
         video_frames = []
         video_notes = []
         for i in range(video_length):
@@ -150,7 +150,7 @@ if __name__ == '__main__':
                 video_frames.append(frame)
 
         ### Create video
-        create_video_from_frames(video_frames, os.path.join('output', f'vid_{video}.mp4'))
+        create_video_from_frames(video_frames, os.path.join('output', f'{video}.mp4'))
 
         ### Create midi
-        create_midi_from_notes(video_notes).save(os.path.join('output', f'midi_{video}.mid'))
+        create_midi_from_notes(video_notes).save(os.path.join('output', f'{video}.mid'))
