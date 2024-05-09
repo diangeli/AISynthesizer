@@ -1,145 +1,137 @@
-# Inspired by: https://github.com/lucidrains/vit-pytorch/blob/main/vit_pytorch/vivit.py
-
 import torch
-from einops import rearrange
+from torch import nn, einsum
+import torch.nn.functional as F
+from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
-from torch import nn
+import numpy as np
 
+class Residual(nn.Module):
+    def __init__(self, fn):
+        super().__init__()
+        self.fn = fn
+    def forward(self, x, **kwargs):
+        return self.fn(x, **kwargs) + x
 
-# Helper functions
-def exists(val):
-    return val is not None
+class PreNorm(nn.Module):
+    def __init__(self, dim, fn):
+        super().__init__()
+        self.norm = nn.LayerNorm(dim)
+        self.fn = fn
+    def forward(self, x, **kwargs):
+        return self.fn(self.norm(x), **kwargs)
 
-
-def pair(t):
-    return t if isinstance(t, tuple) else (t, t)
-
-
-# FeedForward module
 class FeedForward(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout=0.0):
+    def __init__(self, dim, hidden_dim, dropout = 0.):
         super().__init__()
         self.net = nn.Sequential(
-            nn.LayerNorm(dim),
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout),
+            nn.Dropout(dropout)
         )
-
     def forward(self, x):
         return self.net(x)
 
-
-# Attention module
 class Attention(nn.Module):
-    def __init__(self, dim, heads=8, dim_head=64, dropout=0.0):
+    def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0.):
         super().__init__()
-        inner_dim = dim_head * heads
+        inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
 
         self.heads = heads
-        self.scale = dim_head**-0.5
+        self.scale = dim_head ** -0.5
 
-        self.norm = nn.LayerNorm(dim)
-        self.attend = nn.Softmax(dim=-1)
-        self.dropout = nn.Dropout(dropout)
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
 
-        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
-        self.to_out = nn.Sequential(nn.Linear(inner_dim, dim), nn.Dropout(dropout)) if project_out else nn.Identity()
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        ) if project_out else nn.Identity()
 
     def forward(self, x):
-        x = self.norm(x)
-        qkv = self.to_qkv(x).chunk(3, dim=-1)
-        q, k, v = map(lambda t: rearrange(t, "b n (h d) -> b h n d", h=self.heads), qkv)
+        b, n, _, h = *x.shape, self.heads
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = h), qkv)
 
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        attn = self.attend(dots)
-        attn = self.dropout(attn)
+        dots = einsum('b h i d, b h j d -> b h i j', q, k) * self.scale
 
-        out = torch.matmul(attn, v)
-        out = rearrange(out, "b h n d -> b n (h d)")
-        return self.to_out(out)
+        attn = dots.softmax(dim=-1)
 
+        out = einsum('b h i j, b h j d -> b h i d', attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        out =  self.to_out(out)
+        return out
 
-# Transformer module
 class Transformer(nn.Module):
-    def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout=0.0):
+    def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
         super().__init__()
         self.layers = nn.ModuleList([])
+        self.norm = nn.LayerNorm(dim)
         for _ in range(depth):
-            self.layers.append(
-                nn.ModuleList(
-                    [
-                        Attention(dim, heads=heads, dim_head=dim_head, dropout=dropout),
-                        FeedForward(dim, mlp_dim, dropout=dropout),
-                    ]
-                )
-            )
+            self.layers.append(nn.ModuleList([
+                PreNorm(dim, Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout)),
+                PreNorm(dim, FeedForward(dim, mlp_dim, dropout = dropout))
+            ]))
 
     def forward(self, x):
         for attn, ff in self.layers:
             x = attn(x) + x
             x = ff(x) + x
-        return x
+        return self.norm(x)
 
 
-class ViT(nn.Module):
-    def __init__(
-        self,
-        *,
-        image_size,
-        num_frames,
-        num_classes,
-        dim,
-        depth,
-        heads,
-        mlp_dim,
-        pool="mean",
-        channels=3,
-        dim_head=64,
-        dropout=0.0,
-        emb_dropout=0.0,
-    ):
+  
+class ViViT(nn.Module):
+    def __init__(self, image_size, patch_size, num_classes, num_frames, dim = 192, depth = 4, heads = 3, pool = 'cls', in_channels = 3, dim_head = 64, dropout = 0.,
+                 emb_dropout = 0., scale_dim = 4, ):
         super().__init__()
+        
+        assert pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
 
+
+        assert image_size % patch_size == 0, 'Image dimensions must be divisible by the patch size.'
+        num_patches = (image_size // patch_size) ** 2
+        patch_dim = in_channels * patch_size ** 2
         self.to_patch_embedding = nn.Sequential(
-            Rearrange("b f c h w -> b f (h w c)"),
-            nn.Linear(channels * image_size[0] * image_size[1], dim),
-            nn.LayerNorm(dim),
+            Rearrange('b t c (h p1) (w p2) -> b t (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
+            nn.Linear(patch_dim, dim),
         )
 
-        self.pos_embedding = nn.Parameter(torch.randn(1, num_frames, dim))
+        self.pos_embedding = nn.Parameter(torch.randn(1, num_frames, num_patches + 1, dim))
+        self.space_token = nn.Parameter(torch.randn(1, 1, dim))
+        self.space_transformer = Transformer(dim, depth, heads, dim_head, dim*scale_dim, dropout)
+
+        self.temporal_token = nn.Parameter(torch.randn(1, 1, dim))
+        self.temporal_transformer = Transformer(dim, depth, heads, dim_head, dim*scale_dim, dropout)
 
         self.dropout = nn.Dropout(emb_dropout)
-
-        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
-
         self.pool = pool
-        self.to_latent = nn.Identity()
 
-        self.mlp_head = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, num_classes))
+        self.mlp_head = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, num_classes)
+        )
 
-    def forward(self, video):
-        x = self.to_patch_embedding(video)
+    def forward(self, x):
+        x = self.to_patch_embedding(x)
+        b, t, n, _ = x.shape
 
-        x += self.pos_embedding
+        cls_space_tokens = repeat(self.space_token, '() n d -> b t n d', b = b, t=t)
+        x = torch.cat((cls_space_tokens, x), dim=2)
+        x += self.pos_embedding[:, :, :(n + 1)]
         x = self.dropout(x)
 
-        x = self.transformer(x)
+        x = rearrange(x, 'b t n d -> (b t) n d')
+        x = self.space_transformer(x)
+        x = rearrange(x[:, 0], '(b t) ... -> b t ...', b=b)
 
-        # Apply pooling across the temporal dimension
-        if self.pool == "mean":
-            x = x.mean(dim=1, keepdim=True)  # Mean pooling
-        else:
-            x = x.max(dim=1, keepdim=True)[0]  # Max pooling
+        cls_temporal_tokens = repeat(self.temporal_token, '() n d -> b n d', b=b)
+        x = torch.cat((cls_temporal_tokens, x), dim=1)
 
-        # Expand the pooled representation to match the number of frames
-        #x = x.expand(-1, video.shape[1], -1)
+        x = self.temporal_transformer(x)
+        
 
-        x = self.to_latent(x)
-        x = self.mlp_head(x)
-        x = x.squeeze()
+        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
-        return x
+        return self.mlp_head(x)

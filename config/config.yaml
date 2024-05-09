@@ -1,24 +1,30 @@
 data: 
+    # midis_training_path: data/raw/midis/training
+    # videos_training_path: data/raw/videos/training
+    # midis_val_path: data/raw/midis/validation
+    # videos_val_path: data/raw/videos/validation
     midis_training_path: data/processed/midis/beethoven
     videos_training_path: data/processed/videos/beethoven_trimmed
     midis_val_path: data/processed/midis/beethoven_val
     videos_val_path: data/processed/videos/beethoven_val
     midis_test_path: data/processed/midis/beethoven_test
     videos_test_path: data/processed/videos/beethoven_test
+    dataset_name: beethoven
     train_size: 0.8
     test_size: 0.05
     val_size: 0.15
     batch_size: 256
     enable_transforms: True
-    num_workers: 32
+    num_workers: 16
     random_state: 2024
+    resize_img_size: 400
 model:
     name: vivit
     save_model: True
     save_path: models/
     loss: bce # bce
-    num_frames: 5 #250 for beethoven
-    threshold: 0.2
+    num_frames: 3 #250 for beethoven
+    threshold: 0.5
 training:
     optimizer: adam
     lr : 0.0003 # 0.0005

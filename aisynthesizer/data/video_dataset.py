@@ -110,11 +110,12 @@ class VideoDataset(Dataset):
     def load_data(self):
         self.target_videos = []
         self.target_midis = []
+        i = 0
         for video_path, midi_path in zip(self.videos, self.midi_files):
+            if i >= 30:
+                break
             video = cv2.VideoCapture(str(video_path))
             total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT)
-            if total_frames != 250:
-                continue
             half = int(self.num_frames / 2)
             for frame_num in range(int(total_frames)):
                 target_frames = list(range(frame_num-half,frame_num+half+1))
@@ -122,4 +123,6 @@ class VideoDataset(Dataset):
                 target_frames = [frame if frame < total_frames else total_frames-1 for frame in target_frames ]
                 self.target_videos.append((video_path,frame_num,target_frames))
                 self.target_midis.append((midi_path, frame_num, int(total_frames)))
+            i+=1
+                
 

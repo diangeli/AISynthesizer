@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 from torchvision import transforms
 from segmentation_models_pytorch.losses import DiceLoss, FocalLoss, TverskyLoss
 
-from aisynthesizer.models.vivit import ViT
+from aisynthesizer.models.vivit import ViViT
 
 
 class Utils:
@@ -16,7 +16,7 @@ class Utils:
         self.transforms = transforms.Compose(
             [
                 transforms.ToPILImage(),
-                transforms.Resize((224, 224)),  # Resize to the input size expected by the model
+                transforms.Resize((self.config.data.resize_img_size, self.config.data.resize_img_size)),  # Resize to the input size expected by the model
                 transforms.ToTensor(),  # Convert images to PyTorch tensors
                 transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]
@@ -30,17 +30,13 @@ class Utils:
 
     def get_model(self):
         if self.config.model.name == "vivit":
-            return ViT(
-                image_size=(224, 224),  # Height and width of input frames
+            return ViViT(
+                image_size=self.config.data.resize_img_size,  # Height and width of input frames
                 num_frames=self.config.model.num_frames,  # Total number of frames in each video
                 num_classes=88,  # For example, 88 keys on the piano
-                dim=1024,  # Dimensionality of the token/patch embeddings
-                depth=6,  # Number of transformer blocks (depth)
-                heads=8,  # Number of attention heads
-                mlp_dim=2048,  # Dimensionality of the feedforward layer
+                patch_size=16,
                 pool="cls",  # Pooling method ('cls' for class token, 'mean' for mean pooling)
-                channels=3,  # Number of channels in the video frames (RGB, so 3)
-                dim_head=64,  # Dimensionality of each attention head
+                in_channels=3,  # Number of channels in the video frames (RGB, so 3)
                 dropout=0.1,  # Dropout rate
                 emb_dropout=0.1,  # Embedding dropout rate
             )
@@ -134,4 +130,4 @@ class Utils:
             return torch.nn.BCEWithLogitsLoss()
 
     def create_models_name(self, epoch: int):
-        return f"{self.config.model.name}_{self.config.model.loss}_{self.config.training.optimizer}_{self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"
+        return f"{self.config.data.dataset_name}_{self.config.model.name}_{self.config.model.loss}_{self.config.training.optimizer}_{self.config.training.lr}_epoch_{epoch}_out_of_{self.config.training.epochs}_frames_{self.config.model.num_frames}"
